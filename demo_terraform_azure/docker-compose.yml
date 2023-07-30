@@ -1,0 +1,36 @@
+---
+version: "3.9"
+
+services:
+  storage:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: storage 
+    restart: always
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - ./data:/data # Mount data directory to persist Azurite data
+    healthcheck:
+      test: nc 127.0.0.1 10000 -z
+      interval: 1s
+      retries: 30
+    networks:
+      - default
+  storage_init:
+    image: mcr.microsoft.com/azure-cli:latest
+    command:
+      - /bin/sh
+      - -c
+      - | 
+          az storage container create --name tfstate
+    depends_on:
+      storage:
+        condition: service_healthy
+    environment:
+      # https://github.com/Azure/Azurite/blob/main/README.md#usage-with-azure-storage-sdks-or-tools
+      AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://storage:10000/devstoreaccount1;
+
+networks:
+  default:
